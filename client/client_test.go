@@ -1,8 +1,28 @@
 package client
 
 import (
+	"os"
+	"strings"
 	"testing"
 )
+
+func TestProcessLoopDoesNotSendOnClosedSignalChannels(t *testing.T) {
+	src, err := os.ReadFile("client.go")
+	if err != nil {
+		t.Fatalf("read client.go: %v", err)
+	}
+	text := string(src)
+	for _, banned := range []string{"closeChan", "close(pongChan)", "close(readChan)"} {
+		if strings.Contains(text, banned) {
+			t.Fatalf("processLoop still contains unsafe channel-close pattern %q", banned)
+		}
+	}
+	for _, required := range []string{"doneOnce", "signalDone", "case <-done:"} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("processLoop missing single-owner done signal marker %q", required)
+		}
+	}
+}
 
 /**
  * @Author linya.jj
